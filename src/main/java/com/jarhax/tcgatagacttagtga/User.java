@@ -25,9 +25,19 @@ public class User {
 
     public User (String name, String points, String workUnits, String team) {
 
+        this(name, NumberUtils.isNumber(points) ? Long.parseLong(points) : 0, NumberUtils.isNumber(workUnits) ? Long.parseLong(workUnits) : 0, team);
+    }
+
+    public User (String name) {
+
+        this(name, 0, 0, "0");
+    }
+
+    public User (String name, long points, long workUnits, String team) {
+
         this.name = name;
-        this.points = NumberUtils.isNumber(points) ? Long.parseLong(points) : 0;
-        this.workUnits = NumberUtils.isNumber(workUnits) ? Long.parseLong(workUnits) : 0;
+        this.points = points;
+        this.workUnits = workUnits;
         this.teams = new HashSet<>();
         this.teams.add(team);
     }
