@@ -23,11 +23,14 @@ public class Main {
 
     private static final File DIR_INPUT = new File("input");
     private static final File DIR_OUTPUT = new File("output");
+    private static final File DIR_OUTPUT_TEAMS = new File(DIR_OUTPUT, "teams");
+    private static final File DIR_OUTPUT_USERS = new File(DIR_OUTPUT, "users");
 
     private static final File FILE_DAILY_TEAMS = new File(DIR_INPUT, "daily_team_summary.txt");
     private static final File FILE_DAILY_USERS = new File(DIR_INPUT, "daily_user_summary.txt");
 
     public static final Map<String, Team> TEAM_ENTRIES = new HashMap<>();
+    public static final Map<String, Integer> USER_IDS = new HashMap<>();
     public static final List<User> USER_ENTRIES = new ArrayList<>();
     public static final Map<String, User> MERGED_USERS = new HashMap<>();
 
@@ -43,20 +46,6 @@ public class Main {
         mergeGoogle();
 
         LOG.info("Processing has ended. Total time took {}ms.", System.currentTimeMillis() - startTime);
-
-        final User fldc = new User("foldingcoin", "0", "0", "0");
-
-        for (final User user : MERGED_USERS.values()) {
-
-            final String[] tokens = user.getName().split("_ALL_");
-
-            if (tokens.length == 2 && tokens[1].matches("^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$")) {
-
-                fldc.merge(user);
-            }
-        }
-
-        LOG.info("Found {} FLDC folders totalling {} points and {} work units.", fldc.getContainedUSers(), fldc.getPoints(), fldc.getWorkUnits());
     }
 
     private static void processTeams () {
@@ -82,6 +71,7 @@ public class Main {
                 if (parts.length == 2 && NumberUtils.isDigits(parts[0])) {
 
                     errors.add(parts[0]);
+                    LOG.debug("Invalid Team: {}", line);
                 }
 
                 // Valid team
@@ -97,7 +87,7 @@ public class Main {
             LOG.trace("Error reading team data.", e);
         }
 
-        LOG.info("Initial team processing has finished. Toos {}ms. Found {} teams. {} teams were invalid.", System.currentTimeMillis() - startTime, TEAM_ENTRIES.size(), errors.size());
+        LOG.info("Initial team processing has finished. Took {}ms. Found {} teams. {} teams were invalid.", System.currentTimeMillis() - startTime, TEAM_ENTRIES.size(), errors.size());
     }
 
     private static void processUsers () {
@@ -111,6 +101,7 @@ public class Main {
         LOG.info("Starting initial user processing.");
 
         final long startTime = System.currentTimeMillis();
+        int skipped = 0;
 
         try {
 
@@ -134,6 +125,13 @@ public class Main {
 
                 if (user != null) {
 
+                    if (user.getWorkUnits() <= 0) {
+
+                        skipped++;
+                        LOG.debug("Skipping {} on team {} for not having points. P: {} WU: {}", user.getName(), user.getTeams(), user.getPoints(), user.getWorkUnits());
+                        continue;
+                    }
+
                     final Team teamObj = TEAM_ENTRIES.get(team);
 
                     if (teamObj != null) {
@@ -151,7 +149,8 @@ public class Main {
             LOG.trace("Error reading user data.", e);
         }
 
-        LOG.info("Initial user processing has finished. Toos {}ms. Found {} user entries.", System.currentTimeMillis() - startTime, USER_ENTRIES.size());
+        LOG.info("Skipped {} user entries that had 0 points.", skipped);
+        LOG.info("Initial user processing has finished. Took {}ms. Found {} user entries.", System.currentTimeMillis() - startTime, USER_ENTRIES.size());
     }
 
     private static void mergeUsers () {
@@ -166,7 +165,7 @@ public class Main {
             MERGED_USERS.merge(user.getName(), user, (existing, toMerge) -> existing.merge(toMerge));
         }
 
-        LOG.info("Users with same name have been merged. Toos {}ms. Merged {} users, {} remaining.", System.currentTimeMillis() - startTime, startingUserCount - MERGED_USERS.size(), MERGED_USERS.size());
+        LOG.info("Users with same name have been merged. Took {}ms. Merged {} users, {} remaining.", System.currentTimeMillis() - startTime, startingUserCount - MERGED_USERS.size(), MERGED_USERS.size());
     }
 
     private static void mergeGoogle () {
@@ -174,7 +173,7 @@ public class Main {
         LOG.info("Starting merger of automated google users.");
 
         final long startTime = System.currentTimeMillis();
-        final User google = new User("TeamGoogle", "0", "0", "0");
+        final User google = new User("TeamGoogle");
 
         int merged = 0;
 
