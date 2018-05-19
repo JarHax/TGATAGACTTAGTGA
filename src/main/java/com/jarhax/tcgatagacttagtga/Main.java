@@ -128,7 +128,7 @@ public class Main {
                     if (user.getWorkUnits() <= 0) {
 
                         skipped++;
-                        LOG.debug("Skipping {} on team {} for not having points. P: {} WU: {}", user.getName(), user.getTeams(), user.getPoints(), user.getWorkUnits());
+                        LOG.debug("Skipping {} on team {} for not having points. P: {} WU: {}", user.getName(), team, user.getPoints(), user.getWorkUnits());
                         continue;
                     }
 
