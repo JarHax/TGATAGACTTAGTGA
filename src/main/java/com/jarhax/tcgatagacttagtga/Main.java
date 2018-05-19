@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.FileUtils;
@@ -24,6 +25,7 @@ public class Main {
 
     private static final Logger LOG = LogManager.getLogger("Stats");
 
+    private static final Pattern TAB_SEPERATION_PATTERN = Pattern.compile("\\t");
     private static final File DIR_INPUT = new File("input");
 
     private static final File BZ2_DAILY_TEAMS = new File(DIR_INPUT, "daily_team_summary.txt.bz2");
@@ -67,7 +69,7 @@ public class Main {
 
             for (final String line : FileUtils.readLines(FILE_DAILY_TEAMS, StandardCharsets.UTF_8)) {
 
-                final String[] parts = line.split("\\t");
+                final String[] parts = TAB_SEPERATION_PATTERN.split(line);
 
                 // Filters out invalid teams
                 if (parts.length == 2 && NumberUtils.isDigits(parts[0])) {
@@ -122,7 +124,7 @@ public class Main {
 
                 User user = null;
                 String team = "0";
-                final String[] parts = line.split("\\t");
+                final String[] parts = TAB_SEPERATION_PATTERN.split(line);
 
                 if (parts.length == 3 && NumberUtils.isDigits(parts[0])) {
 
