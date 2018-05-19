@@ -59,7 +59,8 @@ public class Main {
         LOG.info("Starting initial team processing.");
 
         final long startTime = System.currentTimeMillis();
-        final Set<String> errors = new HashSet<>();
+        int errors = 0;
+        int skipped = 0;
 
         try {
 
@@ -70,14 +71,25 @@ public class Main {
                 // Filters out invalid teams
                 if (parts.length == 2 && NumberUtils.isDigits(parts[0])) {
 
-                    errors.add(parts[0]);
+                    errors++;
                     LOG.debug("Invalid Team: {}", line);
                 }
 
                 // Valid team
-                else if (parts.length == 4) {
+                else if (parts.length == 4 && NumberUtils.isNumber(parts[3])) {
 
-                    TEAM_ENTRIES.put(parts[0], new Team(parts));
+                    long points = Long.parseLong(parts[3]);
+                    
+                    if (points > 0) {
+                        
+                        TEAM_ENTRIES.put(parts[0], new Team(parts));
+                    }
+                    
+                    else {
+                        
+                        LOG.debug("Skipping team {} because they have no points.");
+                        skipped++;
+                    }
                 }
             }
         }
@@ -87,7 +99,8 @@ public class Main {
             LOG.trace("Error reading team data.", e);
         }
 
-        LOG.info("Initial team processing has finished. Took {}ms. Found {} teams. {} teams were invalid.", System.currentTimeMillis() - startTime, TEAM_ENTRIES.size(), errors.size());
+        LOG.info("Skipped {} teams with 0 points.", skipped);
+        LOG.info("Initial team processing has finished. Took {}ms. Found {} teams. {} teams were invalid.", System.currentTimeMillis() - startTime, TEAM_ENTRIES.size(), errors);
     }
 
     private static void processUsers () {
