@@ -1,19 +1,11 @@
-#IntelliJ IDEA
-*.class
-*.iml
-*.ipr
-*.iws
-out/
-
-#ForgeGradle
-build/
-.gradle/
+# Project
 run/
 
-#Eclipse
-.classpath
-.metadata/
-.project
+# Eclipse
+*.classpath
+*.project
 .settings/
-*.launch
-/bin/
+bin/
+
+# Gradle
+.gradle/
