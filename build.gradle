@@ -11,7 +11,6 @@ dependencies {
 
     compile group: 'commons-io', name: 'commons-io', version: '2.6'
     compile group: 'commons-lang', name: 'commons-lang', version: '2.6'
-    compile group: 'com.jsoniter', name: 'jsoniter', version: '0.9.22'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.11.0'
     compile group: 'com.google.guava', name: 'guava', version: '25.0-jre'
 }
