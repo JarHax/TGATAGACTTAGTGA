@@ -5,12 +5,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.math.NumberUtils;
@@ -22,15 +20,11 @@ public class Main {
     private static final Logger LOG = LogManager.getLogger("Stats");
 
     private static final File DIR_INPUT = new File("input");
-    private static final File DIR_OUTPUT = new File("output");
-    private static final File DIR_OUTPUT_TEAMS = new File(DIR_OUTPUT, "teams");
-    private static final File DIR_OUTPUT_USERS = new File(DIR_OUTPUT, "users");
 
     private static final File FILE_DAILY_TEAMS = new File(DIR_INPUT, "daily_team_summary.txt");
     private static final File FILE_DAILY_USERS = new File(DIR_INPUT, "daily_user_summary.txt");
 
     public static final Map<String, Team> TEAM_ENTRIES = new HashMap<>();
-    public static final Map<String, Integer> USER_IDS = new HashMap<>();
     public static final List<User> USER_ENTRIES = new ArrayList<>();
     public static final Map<String, User> MERGED_USERS = new HashMap<>();
 
@@ -78,15 +72,15 @@ public class Main {
                 // Valid team
                 else if (parts.length == 4 && NumberUtils.isNumber(parts[3])) {
 
-                    long points = Long.parseLong(parts[3]);
-                    
+                    final long points = Long.parseLong(parts[3]);
+
                     if (points > 0) {
-                        
+
                         TEAM_ENTRIES.put(parts[0], new Team(parts));
                     }
-                    
+
                     else {
-                        
+
                         LOG.debug("Skipping team {} because they have no points.");
                         skipped++;
                     }
