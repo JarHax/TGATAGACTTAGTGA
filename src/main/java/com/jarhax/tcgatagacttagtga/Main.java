@@ -1,7 +1,10 @@
 package com.jarhax.tcgatagacttagtga;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,7 +13,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,6 +25,9 @@ public class Main {
     private static final Logger LOG = LogManager.getLogger("Stats");
 
     private static final File DIR_INPUT = new File("input");
+
+    private static final File BZ2_DAILY_TEAMS = new File(DIR_INPUT, "daily_team_summary.txt.bz2");
+    private static final File BZ2_DAILY_USERS = new File(DIR_INPUT, "daily_user_summary.txt.bz2");
 
     private static final File FILE_DAILY_TEAMS = new File(DIR_INPUT, "daily_team_summary.txt");
     private static final File FILE_DAILY_USERS = new File(DIR_INPUT, "daily_user_summary.txt");
@@ -46,8 +54,7 @@ public class Main {
 
         if (!FILE_DAILY_TEAMS.exists()) {
 
-            // TODO do the download now.
-            throw new RuntimeException("Could not find find team data file!");
+            downloadBZip2(BZ2_DAILY_TEAMS, FILE_DAILY_TEAMS, "http://fah-web.stanford.edu/daily_team_summary.txt.bz2");
         }
 
         LOG.info("Starting initial team processing.");
@@ -101,8 +108,7 @@ public class Main {
 
         if (!FILE_DAILY_USERS.exists()) {
 
-            // TODO download
-            throw new RuntimeException("Could not find user data file!");
+            downloadBZip2(BZ2_DAILY_USERS, FILE_DAILY_USERS, "http://fah-web.stanford.edu/daily_user_summary.txt.bz2");
         }
 
         LOG.info("Starting initial user processing.");
@@ -201,5 +207,47 @@ public class Main {
         MERGED_USERS.put("TeamGoogle", google);
 
         LOG.info("Finished merging google users. Took {}ms. Merged {} users, {} remaining.", System.currentTimeMillis() - startTime, merged, MERGED_USERS.size());
+    }
+
+    private static void downloadBZip2 (File input, File output, String url) {
+
+        downloadFile(input, url);
+        decompress(input, output);
+    }
+
+    private static void decompress (File archive, File output) {
+
+        final long startTime = System.currentTimeMillis();
+        LOG.info("Decompressing {}.", archive.getName());
+
+        try (BZip2CompressorInputStream bzIn = new BZip2CompressorInputStream(new FileInputStream(archive)); FileOutputStream out = new FileOutputStream(output)) {
+
+            IOUtils.copyLarge(bzIn, out);
+        }
+
+        catch (final IOException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        }
+
+        LOG.info("Decompressed {} to {} in {}ms.", archive.getName(), output.getName(), System.currentTimeMillis() - startTime);
+    }
+
+    private static void downloadFile (File downloadLocation, String url) {
+
+        final long startTime = System.currentTimeMillis();
+        LOG.info("Starting a download from {}.", url);
+
+        try {
+
+            FileUtils.copyURLToFile(new URL(url), downloadLocation);
+        }
+
+        catch (final IOException e) {
+
+            LOG.catching(e);
+        }
+
+        LOG.info("Completed download of {} in {}ms from {}.", FileUtils.byteCountToDisplaySize(downloadLocation.length()), System.currentTimeMillis() - startTime, url);
     }
 }
