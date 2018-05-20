@@ -6,14 +6,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.sql.*;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
+import com.mysql.jdbc.Driver;
+import javafx.util.Builder;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -38,8 +37,13 @@ public class Main {
     public static final List<User> USER_ENTRIES = new ArrayList<>();
     public static final Map<String, User> MERGED_USERS = new HashMap<>();
 
+    
+    private static String username;
+    private static String password;
+    
     public static void main (String... main) {
-
+        username = main[0];
+        password = main[1];
         LOG.info("Processing has been started.");
 
         final long startTime = System.currentTimeMillis();
@@ -48,10 +52,48 @@ public class Main {
         processUsers();
         mergeUsers();
         mergeGoogle();
-
+        try {
+            insertIntoDatabase();
+        } catch(SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    
         LOG.info("Processing has ended. Total time took {}ms.", System.currentTimeMillis() - startTime);
     }
-
+    
+    private static void insertIntoDatabase() throws SQLException, ClassNotFoundException {
+        LOG.info("Starting database connection");
+    
+        final long startTime = System.currentTimeMillis();
+        
+        Class.forName("com.mysql.jdbc.Driver");
+        Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/folding", username, password);
+        connection.createStatement().executeUpdate("delete from teams");
+        int counter = 0;
+        //this code gets rid of SQL injections, but takes nearly 100 seconds to run https://www.owasp.org/index.php/Injection_Prevention_Cheat_Sheet_in_Java#Example
+//        PreparedStatement statement = connection.prepareStatement("INSERT INTO folding.teams VALUES(?,?)");
+//        for(Team team : TEAM_ENTRIES.values()) {
+//            statement.setInt(1, counter++);
+//            statement.setString(2, team.getName());
+//            statement.addBatch();
+//        }
+//        LOG.info("Batched statements");
+//        statement.executeBatch();
+    
+        
+        //this code removes some characters that cause trouble with manual sql
+        StringBuilder values = new StringBuilder();
+        for(Team team : TEAM_ENTRIES.values()) {
+            values.append("(").append(counter++).append(", \"").append(team.getName().replaceAll("\\(", "").replaceAll("\\)", "").replaceAll("\"", "").replaceAll("\'", "")).append("\"),");
+        }
+        values.reverse().deleteCharAt(0).reverse();
+        
+        connection.createStatement().executeUpdate("INSERT INTO folding.teams VALUES" + values.toString());
+        connection.close();
+        LOG.info("Database connection has finished. Took {}ms.", System.currentTimeMillis() - startTime);
+    
+    }
+    
     private static void processTeams () {
 
         if (!FILE_DAILY_TEAMS.exists()) {
@@ -66,8 +108,10 @@ public class Main {
         int skipped = 0;
 
         try {
-
-            for (final String line : FileUtils.readLines(FILE_DAILY_TEAMS, StandardCharsets.UTF_8)) {
+            List<String> lines = FileUtils.readLines(FILE_DAILY_TEAMS, StandardCharsets.UTF_8);
+            lines.remove(0);
+            lines.remove(0);
+            for (final String line : lines) {
 
                 final String[] parts = TAB_SEPERATION_PATTERN.split(line);
 
@@ -119,8 +163,11 @@ public class Main {
         int skipped = 0;
 
         try {
-
-            for (final String line : FileUtils.readLines(FILE_DAILY_USERS, StandardCharsets.UTF_8)) {
+    
+            List<String> lines = FileUtils.readLines(FILE_DAILY_USERS, StandardCharsets.UTF_8);
+            lines.remove(0);
+            lines.remove(0);
+            for (final String line : lines) {
 
                 User user = null;
                 String team = "0";
