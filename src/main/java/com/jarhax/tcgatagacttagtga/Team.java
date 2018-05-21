@@ -7,7 +7,7 @@ import org.apache.commons.lang.math.NumberUtils;
 
 public class Team extends PointEarner {
 
-    private final String id;
+    private final long id;
     private final List<User> members;
 
     public Team (String[] parts) {
@@ -19,11 +19,11 @@ public class Team extends PointEarner {
 
         super(name, NumberUtils.isNumber(points) ? Long.parseLong(points) : 0, NumberUtils.isNumber(workUnits) ? Long.parseLong(workUnits) : 0);
 
-        this.id = id;
+        this.id = Long.parseLong(id);
         this.members = new ArrayList<>();
     }
 
-    public String getId () {
+    public long getId () {
 
         return this.id;
     }
