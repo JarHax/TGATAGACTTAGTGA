@@ -15,5 +15,33 @@ dependencies {
     compile group: 'com.google.guava', name: 'guava', version: '25.0-jre'
     compile group: 'org.apache.commons', name: 'commons-compress', version: '1.16.1'
     compile group: 'mysql', name: 'mysql-connector-java', version: '5.1.13'
+    compile group: 'org.jooq', name: 'jooq', version: '3.10.7'
+    runtime "org.jooq:jooq-meta:3.10.7"
+    runtime "org.jooq:jooq-codegen:3.10.7"
 
+}
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'Stats', 'Implementation-Version': '1.0.0', 'Main-Class': 'com.jarhax.tcgatagacttagtga.Main'
+    }
+    baseName = project.name + '-all'
+
+    from {
+        configurations.compile.collect {
+            it.isDirectory() ? it : zipTree(it).matching {
+                exclude 'META-INF/**.RSA'
+                exclude 'META-INF/MANIFEST.MF'
+                exclude 'META-INF/log4j-provider.properties'
+            } } }
+    with jar
+}
+
+jar {
+    manifest {
+        attributes(
+                'Class-Path': configurations.compile.collect { it.getName() }.join(' '),
+                'Main-Class': 'com.jarhax.tcgatagacttagtga.Main'
+        )
+    }
 }

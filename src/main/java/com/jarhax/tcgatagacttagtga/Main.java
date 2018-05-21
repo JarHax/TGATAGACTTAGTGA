@@ -1,19 +1,24 @@
 package com.jarhax.tcgatagacttagtga;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.*;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.logging.log4j.*;
+import org.jooq.*;
+import org.jooq.impl.DSL;
 
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
+import java.sql.Date;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.*;
 import java.util.regex.Pattern;
+
+import static com.jarhax.tcgatagacttagtga.db.Tables.*;
 
 public class Main {
     
@@ -32,12 +37,16 @@ public class Main {
     public static final List<User> USER_ENTRIES = new ArrayList<>();
     public static final Map<String, User> MERGED_USERS = new HashMap<>();
     
-    public static final Map<String, Integer> NAME_TO_ID = new HashMap<>();
+    public static final Map<String, Long> NAME_TO_ID = new HashMap<>();
     
     public static Connection connection;
     
+    public static DSLContext dslContext;
+    
     private static String username;
     private static String password;
+    public static final ZoneId ZONE_ID = ZoneId.of("America/Los_Angeles");
+    public static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
     public static void main(String... main) {
         username = main[0];
@@ -54,7 +63,7 @@ public class Main {
             createDatabaseConnection();
             insertTeams();
             insertUsers();
-            //            insertTeamMembers();
+            insertTeamMembers();
         } catch(SQLException | ClassNotFoundException e) {
             e.printStackTrace();
             
@@ -66,7 +75,7 @@ public class Main {
             }
         }
         
-        LOG.info("Processing has ended. Total time took {}ms.", System.currentTimeMillis() - startTime);
+        LOG.info("Processing has ended. Total time took {}ms.", toHumanTime(System.currentTimeMillis() - startTime));
     }
     
     private static void createDatabaseConnection() throws ClassNotFoundException, SQLException {
@@ -77,115 +86,75 @@ public class Main {
         properties.setProperty("user", username);
         properties.setProperty("password", password);
         properties.setProperty("rewriteBatchedStatements", "true");
-        connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/folding", properties);
-        //doesn't always update on the current connection
-        connection.createStatement().execute("SET GLOBAL max_allowed_packet=1073741825");
-        connection.setAutoCommit(false);
-        //TODO this is debug code, remove for production
-        //        connection.createStatement().executeUpdate("TRUNCATE TABLE team_members");
-        //        connection.createStatement().executeUpdate("TRUNCATE TABLE teams");
-        //        connection.createStatement().executeUpdate("TRUNCATE TABLE users");
-        //        connection.commit();
+        connection = DriverManager.getConnection("jdbc:mysql://blamejared.com:3306/folding", properties);
+        dslContext = DSL.using(connection, SQLDialect.MYSQL);
         
         
-        LOG.info("Database connection has finished. Took {}ms.", System.currentTimeMillis() - startTime);
+        LOG.info("Database connection has finished. Took {}ms.", toHumanTime(System.currentTimeMillis() - startTime));
     }
     
     
-    private static void insertTeams() throws SQLException {
+    private static void insertTeams() {
         LOG.info("Starting insertion of Teams.");
         final long startTime = System.currentTimeMillis();
         
-        int i = 1;
-        List<List<Team>> lists = Lists.partition(new ArrayList<>(TEAM_ENTRIES.values()), TEAM_ENTRIES.size() / 10);
-        PreparedStatement statement = connection.prepareStatement("INSERT INTO folding.teams VALUES" + repeat("(?,?)", 1));
-        for(List<Team> teams : lists) {
-            
-            for(Team team : teams) {
-                statement.setLong(1, team.getId());
-                statement.setString(2, team.getName());
-                statement.addBatch();
-            }
-            statement.executeBatch();
-            statement.clearBatch();
-            LOG.info("executed teams " + i++ + " / " + lists.size());
+        BatchBindStep batch = dslContext.batch(dslContext.insertInto(TEAMS, TEAMS.TEAM_ID, TEAMS.NAME).values((Long) null, null).onDuplicateKeyIgnore());
+        for(Team team : TEAM_ENTRIES.values()) {
+            batch.bind(team.getId(), team.getName());
         }
-        connection.commit();
-        LOG.info("Teams have been inserted. Took {}ms.", System.currentTimeMillis() - startTime);
+        batch.execute();
+        
+        LOG.info("Teams have been inserted. Took {}ms.", toHumanTime(System.currentTimeMillis() - startTime));
     }
     
-    private static void insertUsers() throws SQLException {
+    private static void insertUsers() {
         LOG.info("Starting insertion of Users.");
         final long startTime = System.currentTimeMillis();
-    
-        final int[] i = {1};
         
-        List<List<User>> lists = Lists.partition(new ArrayList<>(MERGED_USERS.values()), MERGED_USERS.size() / 10);
+        BatchBindStep userBatch = dslContext.batch(dslContext.insertInto(USERS, USERS.USER_ID, USERS.NAME).values((Integer) null, null).onDuplicateKeyIgnore());
+        BatchBindStep dataBatch = dslContext.batch(dslContext.insertInto(USER_DATA, USER_DATA.DATE, USER_DATA.USER_ID, USER_DATA.POINTS_TOTAL, USER_DATA.WORK_UNITS_TOTAL).values((Date) null, null, null, null).onDuplicateKeyIgnore());
+        BatchBindStep fldcBatch = dslContext.batch(dslContext.insertInto(USER_DATA, USER_DATA.DATE, USER_DATA.USER_ID, USER_DATA.POINTS_TOTAL, USER_DATA.WORK_UNITS_TOTAL).values((Date) null, null, null, null).onDuplicateKeyIgnore());
         
-        ExecutorService pool = Executors.newFixedThreadPool(4);
-        for(List<User> users : lists) {
-            
-            pool.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        PreparedStatement statement = connection.prepareStatement("INSERT INTO folding.users VALUES" + repeat("(?,?)", 1));
-                        for(User user : users) {
-                            statement.setInt(1, NAME_TO_ID.get(user.getName()));
-                            statement.setString(2, user.getName());
-                            statement.addBatch();
-                            
-                        }
-                        statement.executeBatch();
-                        statement.clearBatch();
-                        LOG.info("executed " + users.size() + " users " + i[0]++ + " / " + lists.size());
-                    } catch(SQLException e) {
-                        e.printStackTrace();
-                    }
-                    
-                }
-            });
-            
-            
-            
+        LocalDate now = LocalDate.now(ZONE_ID);
+        String format = DATE_FORMAT.format(now);
+        for(User user : MERGED_USERS.values()) {
+            Long userID = NAME_TO_ID.get(user.getName());
+            userBatch.bind(userID, user.getName());
+            dataBatch.bind(format, userID, user.getTotalPoints(), user.getTotalWorkUnits());
+            if(user.getName().matches("^.*_[13][a-km-zA-HJ-NP-Z0-9]{26,33}$") || user.getName().matches("^[13][a-km-zA-HJ-NP-Z0-9]{26,33}$")) {
+                //TODO FLDC users here
+            }
         }
+        userBatch.execute();
+        dataBatch.execute();
+        fldcBatch.execute();
         
-        pool.shutdown();
-        try {
-            pool.awaitTermination(100000, TimeUnit.MILLISECONDS);
-        } catch(InterruptedException e) {
-            e.printStackTrace();
-        }
-        //        while(!pool.isTerminated()) {
-        //
-        //        }
-        connection.commit();
-        LOG.info("Users have been inserted. Took {}ms.", System.currentTimeMillis() - startTime);
+        LOG.info("Users have been inserted. Took {}ms.", toHumanTime(System.currentTimeMillis() - startTime));
     }
     
-    private static void insertTeamMembers() throws SQLException {
-        //TODO commit
+    private static void insertTeamMembers() {
         LOG.info("Starting insertion of Team Members.");
         final long startTime = System.currentTimeMillis();
         
-        int amount = 0;
+        
+        BatchBindStep batch = dslContext.batch(dslContext.insertInto(TEAM_MEMBERS, TEAM_MEMBERS.TEAM_ID, TEAM_MEMBERS.USER_ID).values((Integer) null, null).onDuplicateKeyIgnore());
+        Map<Long, Set<Long>> entries = new HashMap<>();
         for(Team team : TEAM_ENTRIES.values()) {
-            amount += team.getMembers().size();
-        }
-        PreparedStatement statement = connection.prepareStatement("INSERT INTO folding.team_members VALUES" + repeat("(?,?)", 1));
-        int i = 1;
-        for(Team team : TEAM_ENTRIES.values()) {
-            long teamID = team.getId();
+            Set<Long> set = new HashSet<>();
             for(User user : team.getMembers()) {
-                statement.setLong(1, teamID);
-                statement.setLong(2, NAME_TO_ID.get(user.getName()));
-                statement.executeUpdate();
+                set.add(NAME_TO_ID.get(user.getName()));
+            }
+            entries.put(team.getId(), set);
+        }
+        for(Entry<Long, Set<Long>> entry : entries.entrySet()) {
+            Long teamID = entry.getKey();
+            for(Long userID : entry.getValue()) {
+                batch.bind(teamID, userID);
             }
         }
-        LOG.info("Batched team members");
+        batch.execute();
         
-        
-        LOG.info("Team Members have been inserted. Took {}ms.", System.currentTimeMillis() - startTime);
+        LOG.info("Team Members have been inserted. Took {}ms.", toHumanTime(System.currentTimeMillis() - startTime));
     }
     
     private static void processTeams() {
@@ -237,7 +206,7 @@ public class Main {
         }
         
         LOG.info("Skipped {} teams with 0 points.", skipped);
-        LOG.info("Initial team processing has finished. Took {}ms. Found {} teams. {} teams were invalid.", System.currentTimeMillis() - startTime, TEAM_ENTRIES.size(), errors);
+        LOG.info("Initial team processing has finished. Took {}ms. Found {} teams. {} teams were invalid.", toHumanTime(System.currentTimeMillis() - startTime), TEAM_ENTRIES.size(), errors);
     }
     
     private static void processUsers() {
@@ -251,7 +220,7 @@ public class Main {
         
         final long startTime = System.currentTimeMillis();
         int skipped = 0;
-        int userID = 0;
+        long userID = 0;
         try {
             
             List<String> lines = FileUtils.readLines(FILE_DAILY_USERS, StandardCharsets.UTF_8);
@@ -298,7 +267,7 @@ public class Main {
         }
         
         LOG.info("Skipped {} user entries that had 0 points.", skipped);
-        LOG.info("Initial user processing has finished. Took {}ms. Found {} user entries.", System.currentTimeMillis() - startTime, USER_ENTRIES.size());
+        LOG.info("Initial user processing has finished. Took {}ms. Found {} user entries.", toHumanTime(System.currentTimeMillis() - startTime), USER_ENTRIES.size());
     }
     
     private static void mergeUsers() {
@@ -313,7 +282,7 @@ public class Main {
             MERGED_USERS.merge(user.getName(), user, (existing, toMerge) -> existing.merge(toMerge));
         }
         
-        LOG.info("Users with same name have been merged. Took {}ms. Merged {} users, {} remaining.", System.currentTimeMillis() - startTime, startingUserCount - MERGED_USERS.size(), MERGED_USERS.size());
+        LOG.info("Users with same name have been merged. Took {}ms. Merged {} users, {} remaining.", toHumanTime(System.currentTimeMillis() - startTime), startingUserCount - MERGED_USERS.size(), MERGED_USERS.size());
     }
     
     private static void mergeGoogle() {
@@ -338,11 +307,11 @@ public class Main {
                 it.remove();
             }
         }
-        NAME_TO_ID.putIfAbsent("TeamGoogle", NAME_TO_ID.size() + 1);
+        NAME_TO_ID.putIfAbsent("TeamGoogle", (long) (NAME_TO_ID.size() + 1));
         
         MERGED_USERS.put("TeamGoogle", google);
         
-        LOG.info("Finished merging google users. Took {}ms. Merged {} users, {} remaining.", System.currentTimeMillis() - startTime, merged, MERGED_USERS.size());
+        LOG.info("Finished merging google users. Took {}ms. Merged {} users, {} remaining.", toHumanTime(System.currentTimeMillis() - startTime), merged, MERGED_USERS.size());
     }
     
     private static void downloadBZip2(File input, File output, String url) {
@@ -360,11 +329,10 @@ public class Main {
             
             IOUtils.copyLarge(bzIn, out);
         } catch(final IOException e1) {
-            // TODO Auto-generated catch block
             e1.printStackTrace();
         }
         
-        LOG.info("Decompressed {} to {} in {}ms.", archive.getName(), output.getName(), System.currentTimeMillis() - startTime);
+        LOG.info("Decompressed {} to {} in {}ms.", archive.getName(), output.getName(), toHumanTime(System.currentTimeMillis() - startTime));
     }
     
     private static void downloadFile(File downloadLocation, String url) {
@@ -380,15 +348,15 @@ public class Main {
             LOG.catching(e);
         }
         
-        LOG.info("Completed download of {} in {}ms from {}.", FileUtils.byteCountToDisplaySize(downloadLocation.length()), System.currentTimeMillis() - startTime, url);
+        LOG.info("Completed download of {} in {}ms from {}.", FileUtils.byteCountToDisplaySize(downloadLocation.length()), toHumanTime(System.currentTimeMillis() - startTime), url);
     }
     
-    private static String repeat(String str, int amount) {
+    public static String toHumanTime(long millis) {
         
-        String[] arr = new String[amount];
-        Arrays.fill(arr, str);
-        return String.join(",", arr);
+        long second = (millis / 1000) % 60;
+        long minute = (millis / (1000 * 60)) % 60;
+        long hour = (millis / (1000 * 60 * 60)) % 24;
+        
+        return String.format("%02d:%02d:%02d:%d", hour, minute, second, millis);
     }
-    
-    
 }

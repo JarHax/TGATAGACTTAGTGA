@@ -12,3 +12,6 @@ bin/
 
 out/
 .idea/
+src/main/resources/library\.xml
+
+/build/
