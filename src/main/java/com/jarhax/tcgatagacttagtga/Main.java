@@ -1,11 +1,13 @@
 package com.jarhax.tcgatagacttagtga;
 
+import com.jarhax.tcgatagacttagtga.db.tables.records.UsersRecord;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.*;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.logging.log4j.*;
 import org.jooq.*;
 import org.jooq.impl.DSL;
+import org.jooq.util.mysql.MySQLDataType;
 
 import java.io.*;
 import java.net.URL;
@@ -54,13 +56,14 @@ public class Main {
         LOG.info("Processing has been started.");
         
         final long startTime = System.currentTimeMillis();
-        
-        processTeams();
-        processUsers();
-        mergeUsers();
-        mergeGoogle();
         try {
             createDatabaseConnection();
+            processTeams();
+            processUsers();
+            mergeUsers();
+            mergeGoogle();
+            
+            
             insertTeams();
             insertUsers();
             insertTeamMembers();
@@ -98,7 +101,7 @@ public class Main {
         LOG.info("Starting insertion of Teams.");
         final long startTime = System.currentTimeMillis();
         
-        BatchBindStep batch = dslContext.batch(dslContext.insertInto(TEAMS, TEAMS.TEAM_ID, TEAMS.NAME).values((Long) null, null).onDuplicateKeyIgnore());
+        BatchBindStep batch = dslContext.batch(dslContext.insertInto(TEAMS, TEAMS.TEAM_ID, TEAMS.NAME).values((Integer) null, null).onDuplicateKeyIgnore());
         for(Team team : TEAM_ENTRIES.values()) {
             batch.bind(team.getId(), team.getName());
         }
@@ -113,7 +116,6 @@ public class Main {
         
         BatchBindStep userBatch = dslContext.batch(dslContext.insertInto(USERS, USERS.USER_ID, USERS.NAME).values((Integer) null, null).onDuplicateKeyIgnore());
         BatchBindStep dataBatch = dslContext.batch(dslContext.insertInto(USER_DATA, USER_DATA.DATE, USER_DATA.USER_ID, USER_DATA.POINTS_TOTAL, USER_DATA.WORK_UNITS_TOTAL).values((Date) null, null, null, null).onDuplicateKeyIgnore());
-        BatchBindStep fldcBatch = dslContext.batch(dslContext.insertInto(USER_DATA, USER_DATA.DATE, USER_DATA.USER_ID, USER_DATA.POINTS_TOTAL, USER_DATA.WORK_UNITS_TOTAL).values((Date) null, null, null, null).onDuplicateKeyIgnore());
         
         LocalDate now = LocalDate.now(ZONE_ID);
         String format = DATE_FORMAT.format(now);
@@ -121,13 +123,42 @@ public class Main {
             Long userID = NAME_TO_ID.get(user.getName());
             userBatch.bind(userID, user.getName());
             dataBatch.bind(format, userID, user.getTotalPoints(), user.getTotalWorkUnits());
-            if(user.getName().matches("^.*_[13][a-km-zA-HJ-NP-Z0-9]{26,33}$") || user.getName().matches("^[13][a-km-zA-HJ-NP-Z0-9]{26,33}$")) {
-                //TODO FLDC users here
-            }
+            //            String address = "";
+            //            String token = "";
+            //            //just address as name
+            //            if(user.getName().matches("^[13][a-km-zA-HJ-NP-Z0-9]{26,33}$")) {
+            //                address = user.getName();
+            //                token = "ALL";
+            //            }
+            //            //name_token_address OR name_address
+            //            if(user.getName().matches("^.*_[13][a-km-zA-HJ-NP-Z0-9]{26,33}$")) {
+            //                //TODO FLDC users here
+            //
+            //                String[] split = user.getName().split("_");
+            //                if(split.length == 1){
+            //                    address = split[0];
+            //                    token = "ALL";
+            //                }
+            //                if(split.length == 2){
+            //                    address = split[2];
+            //                }
+            //            }
+            //            if(!address.isEmpty() && !token.isEmpty()){
+            //                fldcBatch.bind(format, userID, address, user.getTotalPoints(), token);
+            //            }
         }
         userBatch.execute();
         dataBatch.execute();
-        fldcBatch.execute();
+        
+        //        SelectQuery<Record> records = dslContext.selectQuery();
+        //        records.addSelect(USER_DATA.DATE, USER_DATA.USER_ID, USER_DATA.POINTS_TOTAL, USERS.NAME);
+        //        records.addFrom(USERS.join(USER_DATA).on(USER_DATA.USER_ID.eq(USERS.USER_ID)));
+        //        records.addConditions(USERS.NAME.likeRegex("^[13][a-km-zA-HJ-NP-Z0-9]{26,33}$"), USERS.NAME.likeRegex("^.*_[13][a-km-zA-HJ-NP-Z0-9]{26,33}$"));
+        //        records.fetch();
+        //        BatchBindStep fldcBatch = dslContext.batch(dslContext.insertInto(USERS_FLDC, USERS_FLDC.DATE, USERS_FLDC.USER_ID, USERS_FLDC.ADDRESS, USERS_FLDC.CREDIT_NEW, USERS_FLDC.TOKEN).values((Date) null, null, null, null,null).onDuplicateKeyIgnore());
+        //
+        //
+        //        fldcBatch.execute();
         
         LOG.info("Users have been inserted. Took {}ms.", toHumanTime(System.currentTimeMillis() - startTime));
     }
@@ -138,7 +169,7 @@ public class Main {
         
         
         BatchBindStep batch = dslContext.batch(dslContext.insertInto(TEAM_MEMBERS, TEAM_MEMBERS.TEAM_ID, TEAM_MEMBERS.USER_ID).values((Integer) null, null).onDuplicateKeyIgnore());
-        Map<Long, Set<Long>> entries = new HashMap<>();
+        Map<Integer, Set<Long>> entries = new HashMap<>();
         for(Team team : TEAM_ENTRIES.values()) {
             Set<Long> set = new HashSet<>();
             for(User user : team.getMembers()) {
@@ -146,8 +177,8 @@ public class Main {
             }
             entries.put(team.getId(), set);
         }
-        for(Entry<Long, Set<Long>> entry : entries.entrySet()) {
-            Long teamID = entry.getKey();
+        for(Entry<Integer, Set<Long>> entry : entries.entrySet()) {
+            Integer teamID = entry.getKey();
             for(Long userID : entry.getValue()) {
                 batch.bind(teamID, userID);
             }
@@ -220,12 +251,24 @@ public class Main {
         
         final long startTime = System.currentTimeMillis();
         int skipped = 0;
-        long userID = 0;
+        long userID = dslContext.select(DSL.max(USERS.USER_ID)).from(USERS).fetchOne().value1() + 1;
         try {
             
             List<String> lines = FileUtils.readLines(FILE_DAILY_USERS, StandardCharsets.UTF_8);
             lines.remove(0);
             lines.remove(0);
+    
+            SelectQuery<Record> query = dslContext.selectQuery();
+            query.addSelect(USERS.USER_ID);
+            query.addSelect(USERS.NAME);
+            query.addFrom(USERS);
+            Result<Record> fetch = query.fetch();
+            LOG.info("Fetched. Took {}ms. Found {} user entries.", toHumanTime(System.currentTimeMillis() - startTime));
+            for(Record record : fetch) {
+                int id = record.getValue(USERS.USER_ID);
+                String name = record.getValue(USERS.NAME);
+                NAME_TO_ID.put(name, (long) id);
+            }
             for(final String line : lines) {
                 
                 User user = null;
@@ -257,7 +300,11 @@ public class Main {
                         
                         teamObj.addMember(user);
                     }
-                    NAME_TO_ID.putIfAbsent(user.getName(), userID++);
+    
+    
+                    if(NAME_TO_ID.putIfAbsent(user.getName(),  userID) == null){
+                        userID++;
+                    }
                     USER_ENTRIES.add(user);
                 }
             }

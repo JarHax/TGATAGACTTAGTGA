@@ -61,7 +61,7 @@ public class Indexes {
         public static Index TEAM_MEMBERS_FKIDX_95 = Internal.createIndex("fkIdx_95", TeamMembers.TEAM_MEMBERS, new OrderField[] { TeamMembers.TEAM_MEMBERS.USER_ID }, false);
         public static Index TEAM_MEMBERS_PRIMARY = Internal.createIndex("PRIMARY", TeamMembers.TEAM_MEMBERS, new OrderField[] { TeamMembers.TEAM_MEMBERS.TEAM_ID, TeamMembers.TEAM_MEMBERS.USER_ID }, true);
         public static Index USERS_PRIMARY = Internal.createIndex("PRIMARY", Users.USERS, new OrderField[] { Users.USERS.USER_ID }, true);
-        public static Index USERS_FLDC_PRIMARY = Internal.createIndex("PRIMARY", UsersFldc.USERS_FLDC, new OrderField[] { UsersFldc.USERS_FLDC.USER_ID }, true);
+        public static Index USERS_FLDC_PRIMARY = Internal.createIndex("PRIMARY", UsersFldc.USERS_FLDC, new OrderField[] { UsersFldc.USERS_FLDC.USER_ID, UsersFldc.USERS_FLDC.DATE }, true);
         public static Index USER_DATA_FKIDX_79 = Internal.createIndex("fkIdx_79", UserData.USER_DATA, new OrderField[] { UserData.USER_DATA.USER_ID }, false);
         public static Index USER_DATA_PRIMARY = Internal.createIndex("PRIMARY", UserData.USER_DATA, new OrderField[] { UserData.USER_DATA.DATE, UserData.USER_DATA.USER_ID }, true);
     }

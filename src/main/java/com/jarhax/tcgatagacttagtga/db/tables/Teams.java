@@ -21,7 +21,8 @@ import org.jooq.Schema;
 import org.jooq.Table;
 import org.jooq.TableField;
 import org.jooq.UniqueKey;
-import org.jooq.impl.*;
+import org.jooq.impl.DSL;
+import org.jooq.impl.TableImpl;
 
 
 /**
@@ -55,7 +56,7 @@ public class Teams extends TableImpl<TeamsRecord> {
     /**
      * The column <code>folding.teams.TEAM_ID</code>.
      */
-    public final TableField<TeamsRecord, Long> TEAM_ID = createField("TEAM_ID", SQLDataType.BIGINT.nullable(false), this, "");
+    public final TableField<TeamsRecord, Integer> TEAM_ID = createField("TEAM_ID", org.jooq.impl.SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>folding.teams.NAME</code>.
