@@ -9,7 +9,7 @@ import com.jarhax.tcgatagacttagtga.db.Indexes;
 import com.jarhax.tcgatagacttagtga.db.Keys;
 import com.jarhax.tcgatagacttagtga.db.tables.records.TeamDataRecord;
 
-import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
 
@@ -40,7 +40,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes" })
 public class TeamData extends TableImpl<TeamDataRecord> {
 
-    private static final long serialVersionUID = -129925943;
+    private static final long serialVersionUID = 686473521;
 
     /**
      * The reference instance of <code>folding.team_data</code>
@@ -58,7 +58,7 @@ public class TeamData extends TableImpl<TeamDataRecord> {
     /**
      * The column <code>folding.team_data.DATE</code>.
      */
-    public final TableField<TeamDataRecord, Date> DATE = createField("DATE", org.jooq.impl.SQLDataType.DATE.nullable(false), this, "");
+    public final TableField<TeamDataRecord, Timestamp> DATE = createField("DATE", org.jooq.impl.SQLDataType.TIMESTAMP.nullable(false), this, "");
 
     /**
      * The column <code>folding.team_data.TEAM_ID</code>.

@@ -9,7 +9,7 @@ import com.jarhax.tcgatagacttagtga.db.Indexes;
 import com.jarhax.tcgatagacttagtga.db.Keys;
 import com.jarhax.tcgatagacttagtga.db.tables.records.UserDataRecord;
 
-import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
 
@@ -40,7 +40,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes" })
 public class UserData extends TableImpl<UserDataRecord> {
 
-    private static final long serialVersionUID = -2141046268;
+    private static final long serialVersionUID = 466591624;
 
     /**
      * The reference instance of <code>folding.user_data</code>
@@ -58,7 +58,7 @@ public class UserData extends TableImpl<UserDataRecord> {
     /**
      * The column <code>folding.user_data.DATE</code>.
      */
-    public final TableField<UserDataRecord, Date> DATE = createField("DATE", org.jooq.impl.SQLDataType.DATE.nullable(false), this, "");
+    public final TableField<UserDataRecord, Timestamp> DATE = createField("DATE", org.jooq.impl.SQLDataType.TIMESTAMP.nullable(false), this, "");
 
     /**
      * The column <code>folding.user_data.USER_ID</code>.

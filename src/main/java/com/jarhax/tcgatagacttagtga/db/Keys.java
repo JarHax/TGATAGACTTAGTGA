@@ -75,9 +75,9 @@ public class Keys {
         public static final UniqueKey<GlobalDataRecord> KEY_GLOBAL_DATA_PRIMARY = Internal.createUniqueKey(GlobalData.GLOBAL_DATA, "KEY_global_data_PRIMARY", GlobalData.GLOBAL_DATA.DATE);
         public static final UniqueKey<TeamsRecord> KEY_TEAMS_PRIMARY = Internal.createUniqueKey(Teams.TEAMS, "KEY_teams_PRIMARY", Teams.TEAMS.TEAM_ID);
         public static final UniqueKey<TeamDataRecord> KEY_TEAM_DATA_PRIMARY = Internal.createUniqueKey(TeamData.TEAM_DATA, "KEY_team_data_PRIMARY", TeamData.TEAM_DATA.DATE, TeamData.TEAM_DATA.TEAM_ID);
-        public static final UniqueKey<TeamMembersRecord> KEY_TEAM_MEMBERS_PRIMARY = Internal.createUniqueKey(TeamMembers.TEAM_MEMBERS, "KEY_team_members_PRIMARY", TeamMembers.TEAM_MEMBERS.TEAM_ID, TeamMembers.TEAM_MEMBERS.USER_ID);
+        public static final UniqueKey<TeamMembersRecord> KEY_TEAM_MEMBERS_PRIMARY = Internal.createUniqueKey(TeamMembers.TEAM_MEMBERS, "KEY_team_members_PRIMARY", TeamMembers.TEAM_MEMBERS.TEAM_MEMBER_ID);
         public static final UniqueKey<UsersRecord> KEY_USERS_PRIMARY = Internal.createUniqueKey(Users.USERS, "KEY_users_PRIMARY", Users.USERS.USER_ID);
-        public static final UniqueKey<UsersFldcRecord> KEY_USERS_FLDC_PRIMARY = Internal.createUniqueKey(UsersFldc.USERS_FLDC, "KEY_users_fldc_PRIMARY", UsersFldc.USERS_FLDC.USER_ID, UsersFldc.USERS_FLDC.DATE);
+        public static final UniqueKey<UsersFldcRecord> KEY_USERS_FLDC_PRIMARY = Internal.createUniqueKey(UsersFldc.USERS_FLDC, "KEY_users_fldc_PRIMARY", UsersFldc.USERS_FLDC.USER_ID);
         public static final UniqueKey<UserDataRecord> KEY_USER_DATA_PRIMARY = Internal.createUniqueKey(UserData.USER_DATA, "KEY_user_data_PRIMARY", UserData.USER_DATA.DATE, UserData.USER_DATA.USER_ID);
     }
 

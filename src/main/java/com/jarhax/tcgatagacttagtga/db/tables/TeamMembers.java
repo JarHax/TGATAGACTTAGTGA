@@ -39,7 +39,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes" })
 public class TeamMembers extends TableImpl<TeamMembersRecord> {
 
-    private static final long serialVersionUID = 1846693969;
+    private static final long serialVersionUID = -1582594732;
 
     /**
      * The reference instance of <code>folding.team_members</code>
@@ -53,6 +53,11 @@ public class TeamMembers extends TableImpl<TeamMembersRecord> {
     public Class<TeamMembersRecord> getRecordType() {
         return TeamMembersRecord.class;
     }
+
+    /**
+     * The column <code>folding.team_members.TEAM_MEMBER_ID</code>.
+     */
+    public final TableField<TeamMembersRecord, Integer> TEAM_MEMBER_ID = createField("TEAM_MEMBER_ID", org.jooq.impl.SQLDataType.INTEGER.nullable(false), this, "");
 
     /**
      * The column <code>folding.team_members.TEAM_ID</code>.

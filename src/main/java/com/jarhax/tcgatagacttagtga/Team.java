@@ -17,7 +17,7 @@ public class Team extends PointEarner {
 
     public Team (String id, String name, String points, String workUnits) {
 
-        super(name, NumberUtils.isNumber(points) ? Long.parseLong(points) : 0, NumberUtils.isNumber(workUnits) ? Long.parseLong(workUnits) : 0);
+        super(org.apache.commons.lang3.StringUtils.stripAccents(name), NumberUtils.isNumber(points) ? Long.parseLong(points) : 0, NumberUtils.isNumber(workUnits) ? Long.parseLong(workUnits) : 0);
 
         this.id = Integer.parseInt(id);
         this.members = new ArrayList<>();
